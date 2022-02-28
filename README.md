@@ -1,5 +1,5 @@
 # BF1942-Master server
-A Battlefield 1942 Master server written in Python.\
+A Battlefield 1942 Master server written in Python.
 ## Requirements:
 - Python 3
 - Open UDP port: 27900
