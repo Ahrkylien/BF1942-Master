@@ -44,7 +44,7 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
             addHeartBeatServer(self.client_address[0], port)
 
 def serverMasterThread():
-    logDebug("start s_>m")
+    logDebug("start s->m")
     s = socketserver.ThreadingUDPServer(('0.0.0.0', 27900), MyUDPHandler, False) # Do not automatically bind
     s.allow_reuse_address = True # Prevent 'cannot bind to address' errors on restart
     s.server_bind()     # Manually bind, to support allow_reuse_address
