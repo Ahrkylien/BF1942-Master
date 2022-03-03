@@ -22,7 +22,7 @@ def addHeartBeatServer(ip, port):
         for i in reversed(range(len(server_list))):
             server = server_list[i]
             if current_timestamp - server[2] > 60*60: # 1 hour
-                server.pop(i)
+                server_list.pop(i)
         server_list.append((ip, port, current_timestamp))
         f.seek(0)
         json.dump(server_list , f)
@@ -30,7 +30,6 @@ def addHeartBeatServer(ip, port):
 
 class MyUDPHandler(socketserver.BaseRequestHandler):
     def handle(self):
-        s = self.request #socket connected to the client
         packet = self.request[0].decode('utf-8')
         socket = self.request[1]
         if "heartbeat" in packet:
