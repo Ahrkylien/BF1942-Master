@@ -61,16 +61,16 @@ def managementThread():
         server_list = []
         #servers with heartbeats:
         for server in current_server_list:
-            if server['source'] == 'heartBeat':
+            if server['source'] == 'Heartbeat':
                 if datetime.now().timestamp() - server['heartbeat_timestamp'] < 60*15:
                     if not serverExists(server_list, server[0], server[1]):
-                        server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "heartBeat"})
+                        server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "Heartbeat"})
         #servers from backup:
         with open('server_list_backup', 'r') as f:
             server_list_static = json.load(f)
             for server in server_list_static:
                 if not serverExists(server_list, server[0], server[1]):
-                    server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "backup"})
+                    server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "Backup"})
         #servers from GameTracker:
         server_list_GameTracker = getServerListFromGameTracker()
         for server in server_list_GameTracker:

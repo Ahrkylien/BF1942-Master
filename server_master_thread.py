@@ -45,7 +45,7 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
             query = queryServer(self.client_address[0], port)
             if query != None:
                 server = {
-                    'source': 'heartBeat',
+                    'source': 'Heartbeat',
                     'IP': self.client_address[0],
                     'queryPort': port,
                     'query': query,

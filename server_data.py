@@ -14,8 +14,8 @@ from datetime import datetime
 #server sort key function:
 def server_key(server):
     keys = (
-        -1*int(server['query']['numplayers']) if server['alive'] else 1,
-        server['source'] != 'heartBeat',
+        -1*int(server['query']['numplayers'],
+        server['source'] != 'Heartbeat',
         server['IP'],
     )
     return(keys)
@@ -37,7 +37,7 @@ class Servers:
                 self.server_list.append(server_new_data)
             else:
                 if server_old_data['heartbeat_timestamp'] != None and datetime.now().timestamp() - server_old_data['heartbeat_timestamp'] < 60*30:
-                    server_old_data['source'] = 'heartBeat' #just to be 100% sure that the source does not get overwritten by the management module
+                    server_old_data['source'] = 'Heartbeat' #just to be 100% sure that the source does not get overwritten by the management module
                 else:
                     server_old_data['source'] = server_new_data['source']
                 server_old_data['query'] = server_new_data['query']
