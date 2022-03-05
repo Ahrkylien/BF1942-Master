@@ -13,7 +13,7 @@ import server_data
 logDebug("####### start of master #######")
 
 #prepare some files:
-for filePath in ['server_list', 'server_list_backup', 'heartbeats']:
+for filePath in ['server_list', 'server_list_backup']:
     if not os.path.isfile(filePath):
         with open(filePath, 'w') as f:
             f.write("[]")
@@ -31,8 +31,6 @@ while True:
     for i, thread in enumerate(threads):
         if not thread.is_alive():
             logDebug("thread crashed: "+thread.name)
-            with open('heartbeats', 'w') as f:
-                f.write("[]")
             thread = threading.Thread(target=thread_targets[i])
             thread.start()
             threads[i] = thread

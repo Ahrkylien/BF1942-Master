@@ -1,6 +1,5 @@
 import os
 import socketserver
-import json
 
 from misc import *
 from server_data import servers

@@ -2,7 +2,6 @@ import os
 import time
 from datetime import datetime
 import json
-import socket
 import threading
 from requests import get as requests_get
 
