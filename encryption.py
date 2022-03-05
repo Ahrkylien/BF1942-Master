@@ -4,7 +4,7 @@ from random import randint
 # A translated and fixed version of Luigi's enctype2 C code
 # read ServerListReadList() in the linux server binary for extra info
 
-def encshare2(tbuff: list, tbuffp: int, len: int):
+def crypt_encrypt(tbuff: list, tbuffp: int, len: int):
     t2 = tbuff[304]
     t1 = tbuff[305]
     t3 = tbuff[306]
@@ -64,19 +64,19 @@ def encshare2(tbuff: list, tbuffp: int, len: int):
     tbuff[306] = t3
     tbuff[307] = t5
 
-def encshare1(tbuff: list, data, datap, len: int):
+def crypt_docrypt(tbuff: list, data, datap, len: int):
     s = 309*4
     p = 309*4
-    encshare2(tbuff,p,16)
+    crypt_encrypt(tbuff,p,16)
     for i in range(len):
         if p - s == 63:
             p = s
-            encshare2(tbuff, p, 16)
+            crypt_encrypt(tbuff, p, 16)
         tbuff_byte = (tbuff[p//4]>>((p%4)*8))&255 #not int
         data[datap+i] ^= tbuff_byte
         p += 1
     
-def encshare3(data, n1: int, n2: int):
+def crypt_seek(data, n1: int, n2: int):
     t2 = n1
     t1 = 0
     t4 = 1
@@ -121,8 +121,7 @@ def encshare3(data, n1: int, n2: int):
     data[307] = t4
     data[308] = n1
 
-#init_crypt_key?
-def encshare4(src, dest):
+def init_crypt_key(src, dest):
     size = len(src)
     for i in range(256):
         dest[i] = 0
@@ -139,7 +138,7 @@ def encshare4(src, dest):
                 dest[pos] = tmp
     for i in range(256):
         dest[i] ^= i
-    encshare3(dest, 0, 0)
+    crypt_seek(dest, 0, 0)
 
 def enctype2_decoder(key: str, data):
     size = len(data)
@@ -157,7 +156,7 @@ def enctype2_decoder(key: str, data):
     
     #fill seed based on header:
     if header_size > 0:
-        encshare4(data[1:1+header_size], seed)
+        init_crypt_key(data[1:1+header_size], seed)
     
     #point to start of data:
     datap += header_size
@@ -170,7 +169,7 @@ def enctype2_decoder(key: str, data):
         return(data)
     
     #use seed to fill datap:
-    encshare1(seed, data, datap, size)
+    crypt_docrypt(seed, data, datap, size)
     
     size -= 7
     
@@ -191,9 +190,9 @@ def enctype2_encoder(key,dataIn):
     
     #fill seed based on header:
     seed = [0] * 326
-    encshare4(data[1:1+header_size], seed)
+    init_crypt_key(data[1:1+header_size], seed)
     #re-fill data based on seed:
-    encshare1(seed, data, datap + header_size, dataIn_size + 7)
+    crypt_docrypt(seed, data, datap + header_size, dataIn_size + 7)
     
     #xor the header with the key:
     for i in range(len(key)):

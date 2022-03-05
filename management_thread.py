@@ -3,39 +3,30 @@ import time
 from datetime import datetime
 import json
 import socket
-import select
 import threading
 from requests import get as requests_get
 
 from misc import *
+from server_data import servers
 
 # create a master list with server stats based on the heartbeats + backup + GameTracker
-
-#server sort key function:
-def server_key(server):
-    keys = (
-        -1*int(server['query']['numplayers']) if server['alive'] else 1,
-        server['source'] != 'heartBeat',
-        server['IP'],
-    )
-    return(keys)
 
 def getServerListFromGameTracker():
     URL_base = "https://www.gametracker.com/search/bf1942/?searchipp=50&sort=0&order=ASC&searchpge="
     servers = []
     try:
-        for i in range(2): #ToDo: make a check on number of pages
+        for i in range(3): #ToDo: make a check on number of pages
             location = "delhi technological university"
             PARAMS = {'address':location}
-            r = requests_get(url = URL_base+str(i), params = PARAMS)
+            r = requests_get(url = URL_base+str(1+i), params = PARAMS)
             data = r.text
             # print(data)
             currentPointer = data.find("<table class=\"table_lst table_lst_srs\">")
             end_of_table = data.find("</table>", currentPointer)
             for j in range(51):
-                if j == 0: continue
                 start_of_tr = data.find("<tr>", currentPointer)
                 currentPointer = data.find("</tr>", start_of_tr)
+                if j == 0: continue
                 #name
                 start_of_name = data.find("<a  href=\"/server_info/", start_of_tr)
                 if start_of_name == -1 or start_of_name > end_of_table: break
@@ -52,60 +43,36 @@ def getServerListFromGameTracker():
                 port = int(data[start_of_port+len("<span class=\"port\">:"):end_of_port])
                 #store
                 servers.append((name, ip, port))
+            if '<span>NEXT</span>' in data: #grayed out next button
+                break
     except: pass
     return(servers)
 
-def queryServer(ip, port):
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #UDP
-        s.setblocking(0)
-        s.connect((ip, port))
-        s.sendall(bytes("\\status\\", 'utf-8'))
-        properties = {}
-        for i in range(20): #max 20 packets
-            ready = select.select([s], [], [], 3) #3 seconds timeout
-            if ready[0]: dataBytes = s.recv(1024*16)
-            else: return(None)
-            dataList = dataBytes.decode("utf-8", errors='ignore').split("\\")
-            dataList.pop(0)
-            nrOfProperties = int(len(dataList)/2)
-            for j in range(nrOfProperties):
-                properties[dataList[j*2]] = dataList[j*2+1]
-            if 'final' in properties:
-                break
-        s.close()
-        if not 'gameId' in properties: return(None) #filter out BFV servers
-        return(properties)
-    except: return(None)
-
-
 def addQueryInfo(server):
     query = queryServer(server['IP'], server['queryPort'])
-    server['alive'] = query != None
-    server['query'] = query if query != None else {}
-    server['timestamp'] = datetime.now().timestamp()
+    server['query'] = query
+    server['query_timestamp'] = datetime.now().timestamp()
+    server['heartbeat_timestamp'] = None
  
-def serverExists(serverList, IP, queryPort):
-    for server in serverList:
-        if server['IP'] == IP and server['queryPort'] == queryPort: return(True)
-    return(False)
-
 def managementThread():
     logDebug("start management")
     while True:
         #compose server list:
+        current_server_list = servers.getList()
         server_list = []
-        with open('heartbeats', 'r') as f:
-            server_list_heartbeats = json.load(f)
-            for server in server_list_heartbeats:
-                if datetime.now().timestamp() - server[2] < 60*15:
+        #servers with heartbeats:
+        for server in current_server_list:
+            if server['source'] == 'heartBeat':
+                if datetime.now().timestamp() - server['heartbeat_timestamp'] < 60*15:
                     if not serverExists(server_list, server[0], server[1]):
                         server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "heartBeat"})
+        #servers from backup:
         with open('server_list_backup', 'r') as f:
             server_list_static = json.load(f)
             for server in server_list_static:
                 if not serverExists(server_list, server[0], server[1]):
                     server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "backup"})
+        #servers from GameTracker:
         server_list_GameTracker = getServerListFromGameTracker()
         for server in server_list_GameTracker:
             if not serverExists(server_list, server[1], server[2]+8433):
@@ -117,11 +84,12 @@ def managementThread():
             thread.start()
             query_treads.append(thread)
         for thread in query_treads: thread.join() #wait till all threads are done
-        #sort the server list:
-        server_list.sort(key=server_key)
-        #store the server list:
-        with open('server_list', 'w') as fout:
-            json.dump(server_list , fout)
+        #remove servers that didnt respond:
+        for i in reversed(range(len(server_list))):
+            if server_list[i]['query'] == None:
+                server_list.pop(i)
+        #add the server list to the data module:
+        servers.addQueryInfos(server_list)
         # wait 4 minutes:
         time.sleep(60*4)
 

@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 
 from misc import *
+from server_data import servers
 
 # UDP on port 27900 of the master
 # s->m: \heartbeat\23000\gamename\bfield1942
@@ -41,6 +42,17 @@ class MyUDPHandler(socketserver.BaseRequestHandler):
             # packet += socket.recv(1024).decode('utf-8')
             logUser(self.client_address[0], packet)
             addHeartBeatServer(self.client_address[0], port)
+            query = queryServer(self.client_address[0], port)
+            if query != None:
+                server = {
+                    'source': 'heartBeat',
+                    'IP': self.client_address[0],
+                    'queryPort': port,
+                    'query': query,
+                    'query_timestamp': datetime.now().timestamp(),
+                    'heartbeat_timestamp': datetime.now().timestamp(),
+                }
+                servers.addQueryInfos([server], True)
 
 def serverMasterThread():
     logDebug("start s->m")

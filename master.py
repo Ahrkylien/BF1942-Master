@@ -6,6 +6,7 @@ from client_master_thread import clientMasterThread
 from server_master_thread import serverMasterThread
 from management_thread import managementThread
 from misc import logDebug
+import server_data
 
 #The main/kern script of the master server that starts and maintains all threads
 

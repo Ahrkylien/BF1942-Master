@@ -3,6 +3,7 @@ import socketserver
 import json
 
 from misc import *
+from server_data import servers
 
 # TCP on port 28900 of the master
 # m->c: \basic\\secure\fT9YlX
@@ -16,10 +17,9 @@ def logUser(ip, packet):
         
 def load_IP_port_list():
     ip_port_list = []
-    with open('server_list', 'r') as f:
-        server_list = json.load(f)
-        for server in server_list:
-            ip_port_list.append((server['IP'], server['queryPort']))
+    server_list = servers.getList()
+    for server in server_list:
+        ip_port_list.append((server['IP'], server['queryPort']))
     return(ip_port_list)
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
