@@ -52,7 +52,12 @@ def addQueryInfo(server):
     server['query'] = query
     server['query_timestamp'] = datetime.now().timestamp()
     server['heartbeat_timestamp'] = None
- 
+
+def serverExists(serverList, IP, queryPort):
+    for server in serverList:
+        if server['IP'] == IP and server['queryPort'] == queryPort: return(True)
+    return(False)
+
 def managementThread():
     logDebug("start management")
     while True:
@@ -63,8 +68,8 @@ def managementThread():
         for server in current_server_list:
             if server['source'] == 'Heartbeat':
                 if datetime.now().timestamp() - server['heartbeat_timestamp'] < 60*15:
-                    if not serverExists(server_list, server[0], server[1]):
-                        server_list.append({'IP' : server[0], "queryPort" : server[1], "source" : "Heartbeat"})
+                    if not serverExists(server_list, server['IP'], server['queryPort']):
+                        server_list.append({'IP' : server['IP'], "queryPort" : server['queryPort'], "source" : "Heartbeat"})
         #servers from backup:
         with open('server_list_backup', 'r') as f:
             server_list_static = json.load(f)
@@ -90,7 +95,7 @@ def managementThread():
         #add the server list to the data module:
         servers.addQueryInfos(server_list)
         # wait 4 minutes:
-        time.sleep(60*4)
+        time.sleep(60*1)
 
 
 

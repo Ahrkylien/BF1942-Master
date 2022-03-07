@@ -1,4 +1,5 @@
 from threading import Lock
+import json
 from datetime import datetime
 
 # this module defines the shared memory between threads
@@ -14,7 +15,7 @@ from datetime import datetime
 #server sort key function:
 def server_key(server):
     keys = (
-        -1*int(server['query']['numplayers'],
+        -1*int(server['query']['numplayers']),
         server['source'] != 'Heartbeat',
         server['IP'],
     )
