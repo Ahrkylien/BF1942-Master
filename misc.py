@@ -1,4 +1,5 @@
 import socket
+import select
 
 from encryption import enctype2_decoder,enctype2_encoder
 
@@ -41,3 +42,26 @@ def getBytesFromServerList(ip_port_list):
     data = packIPList(ip_port_list)
     dataOutEnc = enctype2_encoder("HpWx9z",data)
     return(bytes(dataOutEnc))
+    
+def queryServer(ip, port):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #UDP
+        s.setblocking(0)
+        s.connect((ip, port))
+        s.sendall(bytes("\\status\\", 'utf-8'))
+        properties = {}
+        for i in range(20): #max 20 packets
+            ready = select.select([s], [], [], 3) #3 seconds timeout
+            if ready[0]: dataBytes = s.recv(1024*16)
+            else: return(None)
+            dataList = dataBytes.decode("utf-8", errors='ignore').split("\\")
+            dataList.pop(0)
+            nrOfProperties = int(len(dataList)/2)
+            for j in range(nrOfProperties):
+                properties[dataList[j*2]] = dataList[j*2+1]
+            if 'final' in properties:
+                break
+        s.close()
+        if not 'gameId' in properties: return(None) #filter out BFV servers
+        return(properties)
+    except: return(None)
