@@ -67,12 +67,10 @@ def queryServer(ip, port):
         bf1942_bytearray = bytearray(bf1942_str, 'cp1252')
         num_latinChars = len([1 for byte in bf1942_bytearray if byte in latinChars])
         num_non_latinCharss = len([1 for byte in bf1942_bytearray if byte in non_latinChars])
-        if num_non_latinCharss + num_latinChars == 0:
-            return(bf1942_bytearray.decode("cp1252", errors='ignore'))
-        if num_non_latinCharss/(num_non_latinCharss + num_latinChars) >= 0.8:
-            return(bf1942_bytearray.decode("cp1251", errors='ignore'))
-        else:
-            return(bf1942_bytearray.decode("cp1252", errors='ignore'))
+        if num_non_latinCharss + num_latinChars != 0:
+            if num_non_latinCharss/(num_non_latinCharss + num_latinChars) >= 0.8:
+                return(bf1942_bytearray.decode("cp1251", errors='ignore'))
+        return(bf1942_bytearray.decode("cp1252", errors='ignore'))
     
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #UDP
