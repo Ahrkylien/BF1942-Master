@@ -1,13 +1,14 @@
 import socket
 import select
+import traceback
 
 from encryption import enctype2_decoder,enctype2_encoder
 
 #A few shared or miscellaneous functions
 
-def logDebug(message):
-    with open("log", 'a') as file:
-        file.write("\n"+message)
+def logDebug(debugStr):
+    with open("debug", 'a') as file:
+        file.write("\n"+debugStr)
 
 def parseIPList(listRaw):
     list=[]
@@ -42,7 +43,7 @@ def getBytesFromServerList(ip_port_list):
     data = packIPList(ip_port_list)
     dataOutEnc = enctype2_encoder("HpWx9z",data)
     return(bytes(dataOutEnc))
-    
+
 def queryServer(ip, port):
     unprintableChars = list(range(0, 31+1)) + list(range(127, 159+1))
     latinChars = list(range(65, 90+1)) + list(range(97, 122+1))
@@ -50,9 +51,13 @@ def queryServer(ip, port):
     player_properties = ['playername','keyhash','team','score','kills','deaths','ping']
     int_properties = ['allied_team_ratio','averageFPS','axis_team_ratio','bandwidth_choke_limit','content_check',
         'cpu','dedicated','hostport','maxplayers','name_tag_distance','name_tag_distance_scope','number_of_rounds',
-        'numplayers','reservedslots','roundTime','roundTimeRemain','status','tickets1','tickets2','time_limit',]
+        'numplayers','reservedslots','roundTime','roundTimeRemain','status','tickets1','tickets2','time_limit','location']
     float_properties = [] # maybe: averageFPS, bandwidth_choke_limit, name_tag_distance, name_tag_distance_scope
-    bool_properties = ['password','sv_punkbuster']
+    bool_properties = ['password','sv_punkbuster','hit_indicator','free_camera','external_view', 'auto_balance_teams','allow_nose_cam']
+    list_properties = ['unpure_mods']
+    str_properties = ['gamename','gamever','gameId','gamemode','gametype','hostname','mapId','mapname','version','active_mods','kickback',
+        'kickback_on_splash','soldier_friendly_fire','soldier_friendly_fire_on_splash','spawn_delay','spawn_wave_time','ticket_ratio',
+        'tk_mode','vehicle_friendly_fire','vehicle_friendly_fire_on_splash','teamname_0','teamname_1','game_start_delay','language']
     
     def bf1942_bytes_to_str(bf1942_bytes):
         # removeUnprintableBytes:
@@ -78,9 +83,13 @@ def queryServer(ip, port):
         s.connect((ip, port))
         s.sendall(bytes("\\status\\", 'utf-8'))
         properties = {}
+        final = False
         for i in range(20): #max 20 packets
             ready = select.select([s], [], [], 3) #3 seconds timeout
-            if ready[0]: dataBytes = s.recv(1024*16)
+            if ready[0]:
+                try:
+                    dataBytes = s.recv(1024*16)
+                except: return(None)
             else: return(None)
             dataList = bf1942_bytes_to_str(dataBytes).split("\\")
             dataList.pop(0)
@@ -88,7 +97,10 @@ def queryServer(ip, port):
             for j in range(nrOfProperties):
                 properties[dataList[j*2]] = dataList[j*2+1]
             if 'final' in properties:
-                break
+                final = int(properties['queryid'].split(".")[1]) #number of expected packets
+            if final: # if the final packet and the expected number of packets have been received
+                if i == final - 1:
+                    break
         s.close()
         
         if not 'gameId' in properties: return(None) #filter out BFV servers
@@ -107,11 +119,19 @@ def queryServer(ip, port):
         
         for property_name in properties:
             if property_name in int_properties:
-                properties[property_name] = int(properties[property_name])
+                try:
+                    properties[property_name] = int(properties[property_name])
+                except: pass
             elif property_name in float_properties:
-                properties[property_name] = float(properties[property_name])
+                try:
+                    properties[property_name] = float(properties[property_name])
+                except: pass
             elif property_name in bool_properties:
                 properties[property_name] = properties[property_name] in ['on', 'yes', '1']
+            elif property_name in list_properties:
+                properties[property_name] = [item.strip() for item in properties[property_name].split(',') if len(item) > 0]
+            elif not property_name in str_properties:
+                logDebug("query: "+ip+": unknown property: "+property_name+": "+properties[property_name])
         for player in players:
             for player_property_name in player:
                 if not player_property_name in ['playername', 'keyhash']:
@@ -120,4 +140,9 @@ def queryServer(ip, port):
         properties['players'] = players
         
         return(properties)
-    except: return(None)
+    except Exception as e:
+        logDebug("query: "+ip+": "+str(e))
+        logDebug(str(traceback.print_exc()))
+        try: logDebug(bf1942_bytes_to_str(dataBytes))
+        except: pass
+        return(None)

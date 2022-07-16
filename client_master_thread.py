@@ -25,14 +25,18 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         s = self.request #socket connected to the client
         s.sendall(bytes('\\basic\\\\secure\\MASTER', 'utf-8'))
-        packet = s.recv(1024).decode('utf-8')
-        if not "final" in packet:
-            packet += s.recv(1024).decode('utf-8')
-        #ToDo: add timout and add secure/validate check
-        IP_port_list = load_IP_port_list()
-        DataOut = getBytesFromServerList(IP_port_list)
-        s.sendall(DataOut)
-        logUser(self.client_address[0], packet)
+        packet = s.recv(1024)
+        try:
+            packet = packet.decode('utf-8')
+            if not "final" in packet:
+                packet += s.recv(1024).decode('utf-8')
+            #ToDo: add timout and add secure/validate check
+            IP_port_list = load_IP_port_list()
+            DataOut = getBytesFromServerList(IP_port_list)
+            s.sendall(DataOut)
+            logUser(self.client_address[0], packet)
+        except:
+            logDebug("client: "+self.client_address[0]+": "+packet.hex())
 
 def clientMasterThread():
     logDebug("start c->m")
